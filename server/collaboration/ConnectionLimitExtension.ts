@@ -80,7 +80,21 @@ export class ConnectionLimitExtension implements Extension {
    * @param data The onConnect payload
    * @returns Promise
    */
-  connected({ documentName, socketId }: withContext<connectedPayload>) {
+  connected({
+    documentName,
+    socketId,
+    instance,
+  }: withContext<connectedPayload>) {
+    // Hocuspocus can fire connected after disconnecting during document loading.
+    if (
+      !instance.documents
+        .get(documentName)
+        ?.getConnections()
+        .some((connection) => connection.socketId === socketId)
+    ) {
+      return Promise.resolve();
+    }
+
     const connections =
       this.connectionsByDocument.get(documentName) || new Set();
 

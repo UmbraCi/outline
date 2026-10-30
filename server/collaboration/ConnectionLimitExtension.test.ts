@@ -1,4 +1,6 @@
 // @vitest-isolate true
+import { once } from "node:events";
+import type { onLoadDocumentPayload } from "@hocuspocus/server";
 import { Server } from "@hocuspocus/server";
 import WebSocket from "ws";
 import EDITOR_VERSION from "@shared/editor/version";
@@ -110,5 +112,56 @@ describe("ConnectionLimitExtension", () => {
 
     await sleep(250);
     expect(getConnections()).toBe(0);
+  });
+
+  it("should not exhaust the limit when clients disconnect while loading", async () => {
+    let loading = Promise.resolve();
+    const handleLoadDocument = vi.fn((_data: onLoadDocumentPayload) => loading);
+    const handleConnected = vi.fn();
+    server.configure({
+      extensions: [
+        extension,
+        new EditorVersionExtension(),
+        { onLoadDocument: handleLoadDocument, connected: handleConnected },
+      ],
+    });
+
+    for (let i = 0; i < 2; i++) {
+      let finishLoading: (() => void) | undefined;
+      loading = new Promise<void>((resolve) => {
+        finishLoading = resolve;
+      });
+
+      try {
+        const ws = await createWebSocket();
+        await vi.waitFor(() => {
+          expect(handleLoadDocument).toHaveBeenCalledTimes(i + 1);
+        });
+        const closed = once(ws, "close");
+        ws.close();
+        await closed;
+      } finally {
+        finishLoading?.();
+      }
+
+      await vi.waitFor(() => {
+        expect(handleConnected).toHaveBeenCalledTimes(i + 1);
+      });
+
+      const document = handleLoadDocument.mock.calls[i][0].document;
+      expect(document.getConnectionsCount()).toBe(0);
+      expect(document.isDestroyed).toBe(true);
+      expect(server.getDocumentsCount()).toBe(0);
+    }
+
+    expect(server.getConnectionsCount()).toBe(0);
+    expect(getConnections()).toBe(0);
+
+    const ws = await createWebSocket();
+    await vi.waitFor(() => {
+      expect(getConnections()).toBe(1);
+      expect(ws.readyState).toBe(WebSocket.OPEN);
+    });
+    ws.close();
   });
 });
