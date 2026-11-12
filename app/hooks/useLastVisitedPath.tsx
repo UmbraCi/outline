@@ -81,11 +81,13 @@ export function usePostLoginPath() {
   const key = "postLoginRedirectPath";
 
   const getter = useCallback(() => {
-    let path;
+    let path: string | null = null;
     try {
-      path = sessionStorage.getItem(key) || getCookie(key);
+      path = sessionStorage.getItem(key);
     } catch (_err) {
-      // Expected error if the session storage is full or inaccessible.
+      // The cookie is shared by every tab, so only fall back when this tab
+      // cannot keep its own path.
+      path = getCookie(key) ?? null;
     }
 
     if (path) {

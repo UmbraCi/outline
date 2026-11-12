@@ -130,7 +130,7 @@ export default class AuthStore extends Store<Team> {
         if (this.authenticated) {
           if (isNil(newData.user)) {
             void this.logout({
-              savePath: false,
+              savePath: true,
               clearCache: false,
               revokeToken: false,
             });
