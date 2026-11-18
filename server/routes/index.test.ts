@@ -474,11 +474,11 @@ describe("content security policy", () => {
 });
 
 describe("/locales/:lng.json", () => {
-  it("should serve the translation file with cache headers", async () => {
-    const res = await server.get("/locales/en_US.json");
+  it("should require revalidation before reusing a cached translation", async () => {
+    const res = await server.get("/locales/en_US.json?revalidate=1");
     expect(res.status).toEqual(200);
     expect(res.headers.get("content-type")).toContain("application/json");
-    expect(res.headers.get("cache-control")).toEqual("public, max-age=604800");
+    expect(res.headers.get("cache-control")).toEqual("public, no-cache");
     expect(res.headers.get("etag")).toBeTruthy();
     expect(res.headers.get("access-control-allow-origin")).toEqual("*");
     const body = await res.json();
@@ -502,9 +502,9 @@ describe("/locales/:lng.json", () => {
   });
 
   it("should return 304 when the ETag matches", async () => {
-    const res = await server.get("/locales/de_DE.json");
+    const res = await server.get("/locales/de_DE.json?revalidate=1");
     const etag = res.headers.get("etag") ?? "";
-    const cached = await server.get("/locales/de_DE.json", {
+    const cached = await server.get("/locales/de_DE.json?revalidate=1", {
       headers: { "If-None-Match": etag },
     });
     expect(cached.status).toEqual(304);

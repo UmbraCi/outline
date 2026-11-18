@@ -34,6 +34,9 @@ export function initI18n(defaultLanguage = "en_US") {
         // frontend UI code will hit to load missing translations.
         loadPath: (locale: string[]) =>
           cdnPath(`/locales/${unicodeBCP47toCLDR(locale[0])}.json`),
+
+        // Bypass locale responses previously cached for seven days.
+        queryStringParams: { revalidate: "1" },
       },
       interpolation: {
         escapeValue: false,
