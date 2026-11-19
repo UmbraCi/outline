@@ -22,7 +22,7 @@ import {
   ImportTaskState,
 } from "@shared/types";
 import { toError } from "@shared/utils/error";
-import { isExternalUrl } from "@shared/utils/urls";
+import { isExternalUrl, isUrl } from "@shared/utils/urls";
 import { createContext } from "@server/context";
 import { schema } from "@server/editor";
 import Logger from "@server/logging/Logger";
@@ -427,7 +427,7 @@ export default abstract class APIImportTask<
         return { url, name: name.length !== 0 ? name : node.type.name };
       }),
       "url"
-    ).filter((item) => isExternalUrl(item.url));
+    ).filter((item) => isExternalUrl(item.url) && isUrl(item.url));
 
     // Nothing remote to download — content already points at internal
     // attachments (e.g. a Markdown zip's local files resolved to redirect

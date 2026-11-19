@@ -3,7 +3,7 @@ import fs from "fs-extra";
 import JSZip from "jszip";
 import tmp from "tmp";
 import type { ProsemirrorDoc } from "@shared/types";
-import { Collection, Document, ImportTask } from "@server/models";
+import { Attachment, Collection, Document, ImportTask } from "@server/models";
 import FileStorage from "@server/storage/files";
 import {
   ImportState,
@@ -514,5 +514,18 @@ describe("MarkdownAPIImportTask document export archives", () => {
 
     expect(await Document.count({ where: { apiImportId: importId } })).toBe(0);
     expect(await Collection.findByPk(destination.id)).not.toBeNull();
+  });
+
+  it("does not upload missing relative image paths", async () => {
+    const admin = await buildAdmin();
+    const storeFromUrl = vi.spyOn(FileStorage, "storeFromUrl");
+
+    const { documents } = await importArchive(admin, {
+      "Missing.md": "# Missing\n\n![Photo](missing_assets/photo.png)",
+    });
+
+    expect(documents.map((d) => d.title)).toEqual(["Missing"]);
+    expect(storeFromUrl).not.toHaveBeenCalled();
+    expect(await Attachment.count({ where: { teamId: admin.teamId } })).toBe(0);
   });
 });
